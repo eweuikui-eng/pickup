@@ -1,0 +1,804 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f2f6f5">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="取件码">
+<title>取件码</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#f2f6f5;--card:#ffffff;--ink:#152220;--muted:#6c7f7b;
+  --line:#dde7e4;--accent:#0f766e;--danger:#c0392b;--ok:#0f766e;--chip:#e5f0ed;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#0e1514;--card:#16211f;--ink:#e7efed;--muted:#8a9c98;
+  --line:#26322f;--accent:#2dd4bf;--danger:#e26f60;--ok:#2dd4bf;--chip:#1f2c29}
+  .btn.primary{color:#052e2a}
+}
+html,body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif;
+  -webkit-font-smoothing:antialiased}
+body{padding-bottom:calc(86px + env(safe-area-inset-bottom))}
+header{position:sticky;top:0;z-index:5;display:flex;align-items:baseline;gap:9px;
+  padding:calc(12px + env(safe-area-inset-top)) 16px 11px;background:var(--bg);
+  border-bottom:1px solid var(--line)}
+h1{font-size:18px;margin:0;letter-spacing:.02em;font-weight:700}
+#count{font-size:13px;color:var(--muted);flex:1}
+#clearDone{font-size:13px;color:var(--muted);background:none;border:0;padding:4px}
+main{max-width:620px;margin:0 auto;padding:13px 14px 0}
+#paste{width:100%;min-height:84px;resize:vertical;border-radius:12px;border:1px solid var(--line);
+  background:var(--card);color:var(--ink);padding:11px 12px;font-size:14px;line-height:1.55;
+  font-family:inherit;outline:none}
+#paste:focus{border-color:var(--accent)}
+.row{display:flex;gap:8px;margin-top:9px}
+.btn{flex:1;padding:11px;border-radius:11px;border:1px solid var(--line);background:var(--card);
+  color:var(--ink);font-size:14px;font-weight:600;font-family:inherit}
+.btn:active{transform:scale(.985)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.ghost{flex:0 0 auto;padding:11px 14px;font-weight:500;color:var(--muted)}
+.hint{font-size:12px;color:var(--muted);margin:10px 2px 2px;line-height:1.6}
+.sechead{font-size:12px;color:var(--muted);margin:18px 2px 8px;letter-spacing:.04em}
+.grouphead{display:flex;align-items:center;gap:8px;margin:20px 2px 9px;
+  font-size:13px;font-weight:700;color:var(--ink)}
+.grouphead::before{content:"";width:3px;height:13px;background:var(--accent);border-radius:2px}
+.grouphead span{font-size:12px;font-weight:400;color:var(--muted)}
+.donehead{display:flex;align-items:center;gap:6px;background:none;border:0;
+  font-size:12px;color:var(--muted);padding:6px 2px;margin:14px 0 2px;font-family:inherit}
+.swipewrap{position:relative;border-radius:14px;margin-bottom:10px;overflow:hidden}
+.shint{position:absolute;top:0;bottom:0;width:100%;display:flex;align-items:center;
+  font-size:13px;font-weight:700;color:#fff}
+.shint-l{left:0;justify-content:flex-start;padding-left:20px;background:var(--danger)}
+.shint-r{right:0;justify-content:flex-end;padding-right:20px;background:var(--ok)}
+.card{position:relative;background:var(--card);border:1px solid var(--line);border-radius:15px;
+  box-shadow:0 1px 2px rgba(20,40,36,.05);
+  padding:12px 13px;margin-bottom:0;display:flex;gap:11px;align-items:flex-start;
+  transition:transform .18s ease,max-height .2s ease,opacity .18s ease,
+    margin .2s ease,padding .2s ease,border-width .2s ease;
+  max-height:340px;touch-action:pan-y;overflow:hidden;will-change:transform}
+.card.leaving{max-height:0;opacity:0;margin-bottom:0;padding-top:0;padding-bottom:0;border-width:0}
+.card.done{opacity:.55}
+.card.done .codebtn,.card.done .station{text-decoration:line-through;text-decoration-thickness:1.5px}
+.card.done .codebtn{color:var(--muted)}
+.check{flex:0 0 21px;width:21px;height:21px;border-radius:50%;border:2px solid var(--line);
+  margin-top:7px;display:grid;place-items:center;background:none;padding:0}
+.check.on{background:var(--ok);border-color:var(--ok)}
+.check.on::after{content:"";width:9px;height:5px;border-left:2px solid #fff;border-bottom:2px solid #fff;
+  transform:rotate(-45deg) translateY(-1px)}
+.body{flex:1;min-width:0}
+.codebtn{background:none;border:0;padding:0;margin:1px 0 2px;display:block;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:29px;font-weight:700;letter-spacing:.05em;color:var(--ink);line-height:1.15}
+.codebtn:active{color:var(--accent)}
+.station{font-size:14px;color:var(--ink);margin:2px 0 5px;line-height:1.35;word-break:break-all}
+.meta{display:flex;flex-wrap:wrap;gap:5px 9px;font-size:12px;color:var(--muted);align-items:center}
+.chip{background:var(--chip);border-radius:6px;padding:1px 6px;font-size:11px;color:var(--muted)}
+.warn{color:var(--danger)}
+.mform{display:flex;flex-direction:column;gap:8px;margin-top:9px}
+.mform[hidden]{display:none}
+.minput{padding:11px 12px;border-radius:11px;border:1px solid var(--line);background:var(--card);
+  color:var(--ink);font-size:14px;font-family:inherit;outline:none}
+.minput:focus{border-color:var(--accent)}
+.linkbtn{background:none;border:0;color:var(--accent);font-size:12px;padding:0 0 0 4px;
+  font-family:inherit;text-decoration:underline}
+.noteinput{width:100%;margin-top:9px;padding:8px 10px;font-size:13px;font-family:inherit;
+  border:1px solid var(--accent);border-radius:9px;background:var(--bg);color:var(--ink);outline:none}
+.chip.note{color:var(--accent);border:1px solid var(--accent);background:none}
+.acts{display:flex;gap:14px;margin-top:8px}
+.acts button{background:none;border:0;padding:2px 0;font-size:12px;color:var(--muted);font-family:inherit}
+.acts button.del{color:var(--danger)}
+.empty{text-align:center;color:var(--muted);font-size:13px;padding:38px 20px;line-height:1.9}
+#bar{position:fixed;left:0;right:0;bottom:0;max-width:620px;margin:0 auto;
+  display:flex;gap:8px;padding:10px 14px calc(10px + env(safe-area-inset-bottom));
+  background:var(--bg);border-top:1px solid var(--line);z-index:6}
+#toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translate(-50%,8px);
+  background:#222;color:#fff;font-size:13px;padding:9px 15px;border-radius:20px;opacity:0;
+  transition:.22s;pointer-events:none;z-index:9;max-width:86vw;text-align:center;
+  display:flex;align-items:center;gap:10px}
+#toast.on{opacity:.96;transform:translate(-50%,0)}
+#toast.act{pointer-events:auto}
+#toastAct{background:none;border:0;color:#ffb27a;font-size:13px;font-weight:700;padding:0;font-family:inherit}
+#banner{position:fixed;top:0;left:0;right:0;z-index:99;background:var(--danger);color:#fff;
+  font-size:12px;line-height:1.5;padding:calc(8px + env(safe-area-inset-top)) 14px 8px;display:none}
+#banner.on{display:block}
+.noscript{background:#c0392b;color:#fff;padding:14px;font-size:14px;line-height:1.6}
+#ver{font-size:11px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div id="banner"></div>
+<noscript><div class="noscript">这个页面需要 JavaScript 才能用。<br>如果你看到这段话，说明文件是被「预览」打开的，不是浏览器。请用 Chrome 打开它。</div></noscript>
+<header>
+  <h1>取件码</h1>
+  <span id="count">启动中…</span>
+  <span id="ver">v11</span>
+  <button id="clearDone">清理已取</button>
+</header>
+<main>
+  <textarea id="paste" placeholder="把短信或聊天记录整段粘到这里，一次多条也行"></textarea>
+  <div class="row">
+    <button class="btn primary" id="parse">解析并保存</button>
+    <button class="btn ghost" id="manual">+ 手动</button>
+  </div>
+  <div class="mform" id="mform" hidden>
+    <input id="mCode" class="minput" placeholder="取件码，如 982120" autocomplete="off" inputmode="numeric">
+    <input id="mStation" class="minput" placeholder="驿站或地点，可留空" autocomplete="off">
+    <div class="row" style="margin-top:0">
+      <button class="btn primary" id="mAdd">添加</button>
+      <button class="btn ghost" id="mCancel">收起</button>
+    </div>
+  </div>
+  <div class="hint" id="hint">淘宝/菜鸟、拼多多、丰巢、京东的短信都能认。点取件码复制；打勾或左滑标记已取，右滑删除。<button class="linkbtn" id="demo">试试示例</button></div>
+  <div id="list"></div>
+</main>
+<div id="bar">
+  <button class="btn" id="copyList">复制清单</button>
+  <button class="btn" id="exportBtn">导出备份</button>
+</div>
+<div id="toast"><span id="toastMsg"></span><button id="toastAct" hidden></button></div>
+
+<script>
+// ============ 错误可见化 ============
+function showBanner(msg){
+  var b=document.getElementById('banner');
+  if(!b)return;
+  b.textContent=msg;b.classList.add('on');
+}
+window.addEventListener('error',function(e){
+  showBanner('脚本出错：'+(e.message||'未知')+'（第 '+(e.lineno||'?')+' 行）');
+});
+
+// ============ 工具 ============
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+function b64enc(str){
+  var bytes=new TextEncoder().encode(str),bin='';
+  for(var i=0;i<bytes.length;i++)bin+=String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
+function b64dec(b){
+  var bin=atob(b),bytes=new Uint8Array(bin.length);
+  for(var i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+function copyText(s){
+  if(navigator.clipboard&&window.isSecureContext){
+    return navigator.clipboard.writeText(s).then(function(){return true},function(){return fallbackCopy(s)});
+  }
+  return Promise.resolve(fallbackCopy(s));
+}
+function fallbackCopy(s){
+  var ta=document.createElement('textarea');
+  ta.value=s;ta.style.position='fixed';ta.style.top='0';ta.style.opacity='0';
+  document.body.appendChild(ta);ta.focus();ta.select();
+  var ok=false;try{ok=document.execCommand('copy')}catch(e){ok=false}
+  document.body.removeChild(ta);return ok;
+}
+var toastTimer=null;
+function toast(msg,actLabel,actFn){
+  var t=document.getElementById('toast');
+  document.getElementById('toastMsg').textContent=msg;
+  var btn=document.getElementById('toastAct');
+  if(actLabel&&actFn){
+    btn.hidden=false;btn.textContent=actLabel;
+    btn.onclick=function(){btn.hidden=true;t.classList.remove('on');actFn();};
+    t.classList.add('act');
+  }else{
+    btn.hidden=true;btn.onclick=null;t.classList.remove('act');
+  }
+  t.classList.add('on');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(function(){t.classList.remove('on');btn.hidden=true;},actLabel?4200:1900);
+}
+
+// ============ PARSER-START ============
+const PLATFORM_RULES=[
+  [/菜鸟/,'菜鸟/淘宝'],
+  [/丰巢/,'丰巢'],
+  [/京东|京喜/,'京东'],
+  [/拼多多|多多驿站|多多买菜/,'拼多多'],
+  [/抖音|抖店/,'抖音'],
+  [/兔喜/,'兔喜/中通'],
+  [/妈妈驿站/,'妈妈驿站/圆通'],
+  [/淘宝|天猫/,'淘宝'],
+  [/中通/,'中通'],
+  [/圆通/,'圆通'],
+  [/韵达/,'韵达'],
+  [/申通/,'申通'],
+  [/极兔/,'极兔'],
+  [/顺丰/,'顺丰'],
+  [/邮政|EMS|ems/,'邮政']
+];
+
+const CODE_KEYWORD_RE=/(?:取件码|取货码|提货码|取件密码)\s*(?:是|为|:|：)?\s*([0-9A-Za-z]{1,8}(?:\s*[-—–]\s*[0-9A-Za-z]{1,8}){0,3})/g;
+
+const STATION_SUFFIX='(?:菜鸟驿站|驿站|快递柜|丰巢柜|自提柜|智能柜|服务站|代收点|便民点|便利店|超市)';
+const STATION_PAREN='(?:\\s*[（(][^）)]{1,12}[）)])?';
+const STATION_VERB_RE=new RegExp('(?:已到达|已送达|已送至|已配送至|配送至|已投递|已投入|已放到|已存放至|已暂存至|已放至|已放入|已到|到达|存放至|暂存至|放入|放到|投入|放置在|存放于|在|到|至)\\s*([^\\s，,。；;:【】]{1,28}?'+STATION_SUFFIX+STATION_PAREN+')');
+const STATION_ANY_RE=new RegExp('([\\u4e00-\\u9fa5A-Za-z0-9（）()·\\-]{1,28}?'+STATION_SUFFIX+STATION_PAREN+')');
+const VERB_RE=/(?:已到达|已送达|已送至|已配送至|配送至|已投递|已投入|已放到|已存放至|已暂存至|已放至|已放入|已到|到达|存放至|暂存至|放入|放到|投入|放置在|存放于|在|到|至)/;
+const STATION_ARRIVE_RE=/(?:已到达|已送至|已配送至|配送至|到达)\s*([\u4e00-\u9fa5A-Za-z0-9（）()·\-]{2,20})(?=[，,。；;:：\s]|取件码|取货码|驿站为|驿站名称)/;
+const STATION_ADDR_RE=/(?:已到达|已送达|已送至|已配送至|配送至|已送到|送到|已到|到达|放在|放到|放至|到)\s*([\u4e00-\u9fa5A-Za-z0-9（）()·\-]{2,30}?(?:路|街|巷|道|小区|花园|苑|园|大厦|广场|村|镇|号|楼|栋|单元|室|门|超市|便利店|驿站|柜))(?:$|[，,。；;！!\s])/;
+const HUB_WORDS=/(转运|分拨|集散|中转|中心|营业部|派送|投递部|处理|仓库)/;
+const STATION_NAMED_RE=/(?:驿站|网点|门店|代收点|自提点)(?:名称|名字)?\s*(?:为|是|:|：)\s*([\u4e00-\u9fa5A-Za-z0-9（）()·\-]{2,24})/;
+const STATION_BAD_START=/^(?:您|你|我们|本|该|此|为|是)/;
+const BARE_BRANDS=new Set(['菜鸟驿站','驿站','快递柜','丰巢柜','自提柜','智能柜','服务站','代收点','便民点']);
+
+function normalizeText(t){
+  return String(t==null?'':t)
+    .replace(/\r\n?/g,'\n')
+    .replace(/[\uFF10-\uFF19]/g,function(c){return String.fromCharCode(c.charCodeAt(0)-0xFEE0)})
+    .replace(/[\u00A0\u3000]/g,' ');
+}
+function normalizeCode(c){
+  return String(c).replace(/\s+/g,'').replace(/[—–]/g,'-');
+}
+function cleanStation(s){
+  if(!s)return '';
+  var out=s;
+  var idx=out.search(VERB_RE);
+  if(idx>=0)out=out.slice(idx).replace(VERB_RE,'');
+  out=out.replace(/^[的，,。:；;、\s]+/,'').trim();
+  out=out.replace(/^[0-9A-Za-z]{1,4}(?:[-—–][0-9A-Za-z]{1,6}){1,3}(?=驿站|快递柜|智能柜|自提柜)/,'');
+  out=out.replace(/(\d+号柜)(?:智能柜|快递柜|自提柜|丰巢柜)$/,'$1');
+  if(BARE_BRANDS.has(out))return '';
+  return out;
+}
+function extractStation(seg){
+  // 1) 「已到达 XX」优先：兔喜这类短信真正的地点写在这里
+  var ma=seg.match(STATION_ARRIVE_RE);
+  if(ma){
+    var an=ma[1];
+    var isCity=/[市]$/.test(an)&&an.length<=6;
+    if(!HUB_WORDS.test(an)&&!isCity&&!/(取件码|取货码|提货码)/.test(an))return an;
+  }
+  // 2) 句尾显式写明的站名：「驿站为芙蓉家园」「驿站名称：XX」
+  var m0=seg.match(STATION_NAMED_RE);
+  if(m0){
+    var nm=m0[1].replace(/[，,。；;:：]+$/,'');
+    if(!STATION_BAD_START.test(nm)&&!/(取件码|取货码|提货码|小时|营业|免费|保管|服务|全天|收费|超时)/.test(nm))return nm;
+  }
+  // 3) 动词 + 带后缀的站名
+  var m=seg.match(STATION_VERB_RE);
+  if(m)return cleanStation(m[1]);
+  // 4) 任意带后缀的站名
+  var m2=seg.match(STATION_ANY_RE);
+  if(m2){
+    var st=cleanStation(m2[1]);
+    if(!/(取件码|取货码|提货码)/.test(st))return st;
+  }
+  // 5) 纯地址型站名：「已到岩头镇溪滨路219号」
+  var m5=seg.match(STATION_ADDR_RE);
+  if(m5){
+    var ad=m5[1];
+    if(!/^(您|你|我们)/.test(ad)&&!/(附近|派送|途中|路上|转运|分拨|营业部)/.test(ad))return ad;
+  }
+  return '';
+}
+function pickPlatform(seg){
+  var tag=seg.match(/【([^】]{1,14})】/);
+  if(tag){
+    for(var i=0;i<PLATFORM_RULES.length;i++){
+      if(PLATFORM_RULES[i][0].test(tag[1]))return PLATFORM_RULES[i][1];
+    }
+  }
+  for(var j=0;j<PLATFORM_RULES.length;j++){
+    if(PLATFORM_RULES[j][0].test(seg))return PLATFORM_RULES[j][1];
+  }
+  return '其他';
+}
+function extractPhone(seg){
+  var m=seg.match(/[*＊]{2,}\s*(\d{2,4})(?!\d)/);
+  if(m)return m[1];
+  m=seg.match(/(?:隐私号|虚拟号|转接号|小号|号码)[^\d]{0,10}(1[3-9]\d{9})/);
+  if(m)return m[1].slice(-4);
+  m=seg.match(/(?<!\d)(1[3-9]\d{9})(?!\d)/);
+  if(m)return m[1].slice(-4);
+  m=seg.match(/(?:尾号|后四位|后4位)[^\d]{0,4}(\d{4})/);
+  if(m)return m[1];
+  return '';
+}
+function extractDeadline(seg,nowMs){
+  var m=seg.match(/(?:(\d{4})\s*年)?\s*(\d{1,2})\s*月\s*(\d{1,2})\s*[日号]/);
+  if(m){
+    var y=m[1]?parseInt(m[1],10):new Date(nowMs).getFullYear();
+    var d=new Date(y,parseInt(m[2],10)-1,parseInt(m[3],10),23,59,59);
+    if(!m[1]&&d.getTime()<nowMs-45*864e5)d.setFullYear(y+1);
+    if(isNaN(d.getTime()))return null;
+    return {ts:d.getTime(),approx:false,label:parseInt(m[2],10)+'月'+parseInt(m[3],10)+'日'};
+  }
+  m=seg.match(/(?:请于)?\s*(\d{1,3})\s*个?\s*小时(?:内|之内)/);
+  if(m)return {ts:nowMs+parseInt(m[1],10)*3600e3,approx:true,label:m[1]+'小时内'};
+  m=seg.match(/(?:保管|免费保管|存放|保存)\s*(\d{1,3})\s*(?:个)?\s*小时/);
+  if(m)return {ts:nowMs+parseInt(m[1],10)*3600e3,approx:true,label:m[1]+'小时内'};
+  return null;
+}
+function splitMessages(text){
+  var out=[],blocks=text.split(/\n{2,}/);
+  for(var i=0;i<blocks.length;i++){
+    var parts=blocks[i].split(/(?=【)/).map(function(s){return s.trim()}).filter(Boolean);
+    for(var j=0;j<parts.length;j++)out.push(parts[j]);
+  }
+  return out.length?out:[text];
+}
+function findCodes(seg){
+  var codes=[];
+  function add(c){
+    c=normalizeCode(c);
+    if(/[0-9A-Za-z]/.test(c)&&c.length>=3&&codes.indexOf(c)<0)codes.push(c);
+  }
+  CODE_KEYWORD_RE.lastIndex=0;
+  var m;
+  while((m=CODE_KEYWORD_RE.exec(seg)))add(m[1]);
+  var DASH_RE=/(?<![\dA-Za-z:：])(\d{1,3}(?:\s*[-—–]\s*\d{1,5}){2,3})(?![\dA-Za-z:：])/g;
+  var m2;
+  while((m2=DASH_RE.exec(seg)))add(m2[1]);
+  var PURE_RE=/(?:取件码|取货码|提货码)[^0-9]{0,8}((?:\d{3,8})(?:\s*[、,，和及]\s*(?:\d{3,8}))+)/g;
+  var m3;
+  while((m3=PURE_RE.exec(seg)))m3[1].split(/[、,，和及]/).forEach(add);
+  return codes;
+}
+function parseMessages(text,nowMs){
+  var now=nowMs||Date.now();
+  var src=normalizeText(text);
+  var segs=splitMessages(src);
+  var items=[],seen=new Set();
+  for(var i=0;i<segs.length;i++){
+    var seg=segs[i];
+    if(!seg)continue;
+    var codes=findCodes(seg);
+    if(!codes.length)continue;
+    var body=seg.replace(/^【[^】]{1,14}】\s*/,'');
+    var station=extractStation(body);
+    // 「站点类型 | 详细地址」：竖线右边才是真正的取件地点
+    var lines=body.split('\n');
+    for(var li=0;li<lines.length;li++){
+      var parts=lines[li].split(/\s*[|｜]\s*/);
+      if(parts.length===2&&parts[0].trim().length>=2&&parts[1].trim().length>=2&&parts[1].trim().length<=40){
+        station=parts[1].trim();break;
+      }
+    }
+    var platform=pickPlatform(seg);
+    var phone=extractPhone(seg);
+    var dl=extractDeadline(seg,now);
+    for(var k=0;k<codes.length;k++){
+      var code=codes[k],key=station+'|'+code;
+      if(seen.has(key))continue;
+      seen.add(key);
+      items.push({
+        code:code,station:station,platform:platform,phone:phone,
+        deadline:dl?dl.ts:null,deadlineLabel:dl?dl.label:'',deadlineApprox:dl?dl.approx:false,
+        raw:seg,createdAt:now,done:false,doneAt:0,note:''
+      });
+    }
+  }
+  return items;
+}
+// ============ PARSER-END ============
+
+// ============ 状态 ============
+var KEY='pickup.v1';
+var state={items:[],showDone:false};
+var storageOK=true;
+
+function load(){
+  try{
+    var raw=localStorage.getItem(KEY);
+    if(raw){
+      var p=JSON.parse(raw);
+      if(p&&Array.isArray(p.items))state.items=p.items;
+    }
+  }catch(e){storageOK=false;}
+}
+function save(){
+  try{localStorage.setItem(KEY,JSON.stringify({items:state.items}));}
+  catch(e){storageOK=false;}
+}
+function purgeDone(){
+  var now=Date.now(),before=state.items.length;
+  state.items=state.items.filter(function(i){
+    if(!i.done)return true;
+    if(!i.doneAt)i.doneAt=now;
+    return now-i.doneAt<864e5;
+  });
+  return before-state.items.length;
+}
+function mergeItems(incoming){
+  var added=0,updated=0,dupDone=0;
+  for(var i=0;i<incoming.length;i++){
+    var it=incoming[i],key=(it.station||'')+'|'+it.code;
+    var exist=null;
+    for(var j=0;j<state.items.length;j++){
+      var cand=state.items[j];
+      if(cand.code!==it.code)continue;
+      if((cand.station||'')===(it.station||'')){exist=cand;break;}
+      // 一边没识别出站名，也当作同一条，避免重复
+      if(!cand.station||!it.station){exist=cand;break;}
+    }
+    if(exist){
+      if(!exist.deadline&&it.deadline){exist.deadline=it.deadline;exist.deadlineLabel=it.deadlineLabel;}
+      if(!exist.station&&it.station)exist.station=it.station;
+      if(!exist.phone&&it.phone)exist.phone=it.phone;
+      if(!exist.raw&&it.raw)exist.raw=it.raw;
+      if(!exist.note&&it.note)exist.note=it.note;
+      updated++;
+      if(exist.done)dupDone++;
+    }else{
+      it.id=uid();
+      state.items.push(it);
+      added++;
+    }
+  }
+  return {added:added,updated:updated,dupDone:dupDone};
+}
+
+function feedbackOf(r){
+  if(!r.added){
+    if(r.dupDone&&r.dupDone===r.updated)return '这几条已经在列表里，而且已经取过了';
+    return '这几条已经在列表里了，没有重复添加';
+  }
+  var m='新增 '+r.added+' 件';
+  if(r.updated)m+='，'+r.updated+' 件原本就有';
+  return m;
+}
+
+// ============ 渲染 ============
+function fmtDeadline(it){
+  if(!it.deadline)return null;
+  var diff=it.deadline-Date.now();
+  var rest;
+  if(diff<0)rest={t:'已超时',w:true};
+  else if(diff<864e5)rest={t:'今天到期',w:true};
+  else if(diff<2*864e5)rest={t:'明天到期',w:false};
+  else rest={t:'剩'+Math.ceil(diff/864e5)+'天',w:false};
+  return {text:(it.deadlineApprox?'约 ':'')+(it.deadlineLabel||''),rest:rest};
+}
+function esc(s){
+  return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+function cardHTML(it){
+  var dl=fmtDeadline(it),meta=[];
+  if(dl)meta.push('<span class="'+(dl.rest.w?'warn':'')+'">⏰ '+esc(dl.text)+' · '+esc(dl.rest.t)+'</span>');
+  if(it.phone)meta.push('<span>尾号 '+esc(it.phone)+'</span>');
+  if(it.note)meta.push('<span class="chip note">备注 '+esc(it.note)+'</span>');
+  if(it.platform&&it.platform!=='其他')meta.push('<span class="chip">'+esc(it.platform)+'</span>');
+  return '<div class="swipewrap" data-id="'+it.id+'">'+
+    '<div class="shint shint-l">删除</div>'+
+    '<div class="shint shint-r">✓ 已取</div>'+
+    '<div class="card'+(it.done?' done':'')+'">'+
+    '<button class="check'+(it.done?' on':'')+'" data-act="toggle" aria-label="已取"></button>'+
+    '<div class="body">'+
+      '<button class="codebtn" data-act="copy">'+esc(it.code)+'</button>'+
+      '<div class="station">'+esc(it.station||'（未识别驿站）')+'</div>'+
+      '<div class="meta">'+meta.join('')+'</div>'+
+      '<div class="acts">'+
+        '<button data-act="note">'+(it.note?'改备注':'备注')+'</button>'+
+        '<button data-act="toggle">'+(it.done?'放回待取':'标记已取')+'</button>'+
+        '<button class="del" data-act="del">删除</button>'+
+      '</div>'+
+    '</div>'+
+  '</div></div>';
+}
+function areaOf(st){
+  if(!st)return '';
+  var cut=st.split(/[\d０-９]+\s*[号栋楼幢单元室]/)[0].trim();
+  if(cut.length<2)cut=st;
+  return cut;
+}
+function byDeadline(a,b){
+  var ad=a.deadline==null?Infinity:a.deadline;
+  var bd=b.deadline==null?Infinity:b.deadline;
+  if(ad!==bd)return ad-bd;
+  return b.createdAt-a.createdAt;
+}
+function render(){
+  var list=document.getElementById('list');
+  var active=state.items.filter(function(i){return !i.done});
+  var all=state.items.slice().sort(byDeadline);
+  var html='';
+  if(!state.items.length){
+    html='<div class="empty">还没有记录。<br>把一条取件短信粘到上面，点「解析并保存」。</div>';
+  }else{
+    if(active.length){
+      html+='<div class="sechead">待取 '+active.length+' 件 · 左滑已取 / 右滑删除</div>';
+    }else{
+      html+='<div class="sechead">都取完了 · 打勾的卡片一天后自动消失</div>';
+    }
+    var order=[],map={};
+    all.forEach(function(it){
+      var a=(it.note&&it.note.trim())||areaOf(it.station)||'未识别驿站';
+      if(!map[a]){map[a]=[];order.push(a);}
+      map[a].push(it);
+    });
+    order.sort(function(x,y){
+      var mx=Infinity,my=Infinity;
+      map[x].forEach(function(i){if(!i.done&&i.deadline!=null&&i.deadline<mx)mx=i.deadline;});
+      map[y].forEach(function(i){if(!i.done&&i.deadline!=null&&i.deadline<my)my=i.deadline;});
+      var ax=map[x].some(function(i){return !i.done})?0:1;
+      var ay=map[y].some(function(i){return !i.done})?0:1;
+      if(ax!==ay)return ax-ay;
+      if(mx!==my)return mx-my;
+      return map[y].length-map[x].length;
+    });
+    order.forEach(function(a){
+      var g=map[a];
+      var act=g.filter(function(i){return !i.done}).length;
+      if(g.length>1){
+        html+='<div class="grouphead">'+esc(a)+'<span>'+(act?'待取 '+act+' 件':'已取完')+'</span></div>';
+      }
+      html+=g.map(cardHTML).join('');
+    });
+  }
+  list.innerHTML=html;
+  var n=active.length;
+  document.getElementById('count').textContent=n?('待取 '+n+' 件'):(state.items.length?'都取完了':'还没记录');
+}
+
+// ============ 交互 ============
+function findItem(id){
+  for(var i=0;i<state.items.length;i++)if(state.items[i].id===id)return state.items[i];
+  return null;
+}
+function toggleDone(id){
+  var it=findItem(id);
+  if(!it)return;
+  it.done=!it.done;
+  it.doneAt=it.done?Date.now():0;
+  save();render();
+  if(it.done){
+    toast('已取 · 24 小时后自动消失','撤销',function(){
+      it.done=false;it.doneAt=0;save();render();
+    });
+  }
+}
+function startNoteEdit(wrap,it){
+  if(wrap.querySelector('.noteinput'))return;
+  var inp=document.createElement('input');
+  inp.className='noteinput';
+  inp.type='text';
+  inp.maxLength=20;
+  inp.placeholder='备注，比如「下日川」';
+  inp.value=it.note||'';
+  wrap.querySelector('.body').appendChild(inp);
+  inp.focus();
+  var done=false;
+  function commit(){
+    if(done)return;
+    done=true;
+    var v=inp.value.trim();
+    if(v!==(it.note||'')){it.note=v;save();}
+    render();
+  }
+  inp.addEventListener('blur',commit);
+  inp.addEventListener('keydown',function(e){
+    if(e.key==='Enter'){e.preventDefault();inp.blur();}
+  });
+}
+function deleteItem(id){
+  var idx=-1;
+  for(var i=0;i<state.items.length;i++)if(state.items[i].id===id){idx=i;break;}
+  if(idx<0)return;
+  var backup=state.items[idx];
+  state.items.splice(idx,1);
+  save();render();
+  toast('已删除','撤销',function(){
+    state.items.push(backup);save();render();
+  });
+}
+
+document.getElementById('list').addEventListener('click',function(e){
+  var btn=e.target.closest('[data-act]');
+  if(!btn)return;
+  var act=btn.dataset.act;
+  var wrap=btn.closest('.swipewrap');
+  if(!wrap)return;
+  var id=wrap.dataset.id,it=findItem(id);
+  if(!it)return;
+  if(act==='copy'){
+    copyText(it.code).then(function(ok){toast(ok?'已复制 '+it.code:'复制失败，长按取件码手动复制')});
+  }else if(act==='toggle'){
+    toggleDone(id);
+  }else if(act==='del'){
+    deleteItem(id);
+  }else if(act==='note'){
+    startNoteEdit(wrap,it);
+  }
+});
+
+// 左滑 = 已取，右滑 = 删除
+(function(){
+  var list=document.getElementById('list');
+  var drag=null;
+  list.addEventListener('pointerdown',function(e){
+    var wrap=e.target.closest('.swipewrap');
+    if(!wrap||e.target.closest('.acts'))return;
+    drag={wrap:wrap,card:wrap.querySelector('.card'),id:wrap.dataset.id,
+      x:e.clientX,y:e.clientY,dx:0,on:false};
+  });
+  list.addEventListener('pointermove',function(e){
+    if(!drag)return;
+    var dx=e.clientX-drag.x,dy=e.clientY-drag.y;
+    if(!drag.on){
+      if(Math.abs(dy)>Math.abs(dx)&&Math.abs(dy)>10){drag=null;return;}
+      if(Math.abs(dx)>14)drag.on=true;else return;
+    }
+    if(dx>120)dx=120;
+    if(dx<-120)dx=-120;
+    drag.dx=dx;
+    drag.card.style.transition='none';
+    drag.card.style.transform='translateX('+dx+'px)';
+  });
+  function end(){
+    if(!drag)return;
+    var d=drag;drag=null;
+    if(!d.on)return;
+    d.card.style.transition='';
+    if(d.dx<-90){
+      d.card.style.transform='';
+      toggleDone(d.id);
+    }else if(d.dx>90){
+      d.card.style.transform='translateX(110%)';
+      setTimeout(function(){deleteItem(d.id)},150);
+    }else{
+      d.card.style.transform='';
+    }
+  }
+  list.addEventListener('pointerup',end);
+  list.addEventListener('pointercancel',end);
+})();
+
+document.getElementById('parse').addEventListener('click',function(){
+  var el=document.getElementById('paste');
+  var text=el.value.trim();
+  if(!text){toast('先粘贴一段文字');return;}
+  if(text.indexOf('#PICKUP-V1#')===0){
+    importPayload(text.slice(11).trim());
+    el.value='';
+    return;
+  }
+  var items=parseMessages(text,Date.now());
+  if(!items.length){
+    toast('没认出取件码，检查一下是不是完整短信');
+    return;
+  }
+  var r=mergeItems(items);
+  save();purgeDone();render();
+  el.value='';el.blur();
+  setTimeout(function(){
+    var l=document.getElementById('list');
+    if(l&&l.scrollIntoView)l.scrollIntoView({block:'start',behavior:'smooth'});
+  },60);
+  toast(feedbackOf(r));
+});
+
+function importPayload(b64){
+  var data;
+  try{data=JSON.parse(b64dec(b64));}catch(e){toast('备份文本损坏了');return;}
+  if(!data||!Array.isArray(data.items)){toast('备份格式不对');return;}
+  var r=mergeItems(data.items);
+  save();purgeDone();render();
+  toast(feedbackOf(r));
+}
+
+document.getElementById('copyList').addEventListener('click',function(){
+  var active=state.items.filter(function(i){return !i.done});
+  if(!active.length){toast('没有待取的');return;}
+  active.sort(function(a,b){
+    return (a.deadline==null?Infinity:a.deadline)-(b.deadline==null?Infinity:b.deadline);
+  });
+  var lines=active.map(function(i){
+    var bits=[i.code];
+    if(i.note)bits.push(i.note);
+    if(i.station)bits.push(i.station);
+    if(i.phone)bits.push('尾号'+i.phone);
+    return '· '+bits.join(' · ');
+  });
+  copyText('待取 '+active.length+' 件\n'+lines.join('\n')).then(function(ok){
+    toast(ok?'清单已复制':'复制失败');
+  });
+});
+
+document.getElementById('exportBtn').addEventListener('click',function(){
+  if(!state.items.length){toast('没有可导出的');return;}
+  var payload='#PICKUP-V1#'+b64enc(JSON.stringify({items:state.items}));
+  copyText(payload).then(function(ok){
+    toast(ok?'备份已复制，粘到另一台手机的输入框即可导入':'复制失败');
+  });
+});
+
+document.getElementById('clearDone').addEventListener('click',function(){
+  var n=state.items.filter(function(i){return i.done}).length;
+  if(!n){toast('没有已取的');return;}
+  state.items=state.items.filter(function(i){return !i.done});
+  save();render();
+  toast('清理了 '+n+' 件');
+});
+
+var mform=document.getElementById('mform');
+document.getElementById('manual').addEventListener('click',function(){
+  mform.hidden=!mform.hidden;
+  if(!mform.hidden)document.getElementById('mCode').focus();
+});
+document.getElementById('mCancel').addEventListener('click',function(){
+  mform.hidden=true;
+});
+function addManual(){
+  var codeEl=document.getElementById('mCode');
+  var stEl=document.getElementById('mStation');
+  var code=codeEl.value.trim().replace(/\s+/g,'');
+  var station=stEl.value.trim();
+  if(!code){toast('取件码不能空');codeEl.focus();return;}
+  var now=Date.now();
+  var r=mergeItems([{
+    code:code,station:station,platform:'手动',phone:'',
+    deadline:null,deadlineLabel:'',deadlineApprox:false,raw:'',
+    createdAt:now,done:false,doneAt:0,note:''
+  }]);
+  save();purgeDone();render();
+  codeEl.value='';stEl.value='';codeEl.focus();
+  toast(r.added?('已添加 '+code):'这条已经在列表里了');
+}
+document.getElementById('mAdd').addEventListener('click',addManual);
+document.getElementById('mCode').addEventListener('keydown',function(e){
+  if(e.key==='Enter'){e.preventDefault();document.getElementById('mStation').focus();}
+});
+document.getElementById('mStation').addEventListener('keydown',function(e){
+  if(e.key==='Enter'){e.preventDefault();addManual();}
+});
+
+document.getElementById('demo').addEventListener('click',function(){
+  document.getElementById('paste').value=
+'【菜鸟驿站】您的包裹已到翠竹苑驿站，取件码：1-2-3456，请于11月24日前凭取件码取件。\n'+
+'【丰巢】您的包裹已放入丰巢智能柜，取件码：876543，请于24小时内取件。\n'+
+'【拼多多】您的包裹已到多多驿站（南门），取件码 6-7-1024，手机尾号 8821。';
+  toast('示例已填入，点解析试试');
+});
+
+// ============ 从网址接收短信（给 iPhone 快捷指令用） ============
+function maybeDecode(s){
+  try{ if(/%[0-9A-Fa-f]{2}/.test(s)) return decodeURIComponent(s); }catch(e){}
+  return s;
+}
+function takeIncoming(){
+  var t='';
+  try{
+    var q=new URLSearchParams(location.search);
+    t=q.get('t')||'';
+  }catch(e){ return; }
+  if(!t) return;
+  t=maybeDecode(t).trim();
+  var items=parseMessages(t,Date.now());
+  if(items.length){
+    var r=mergeItems(items);
+    save();purgeDone();render();
+    toast(r.added?('收到 '+r.added+' 件'):'这条已经在列表里了');
+  }else{
+    toast('没认出取件码');
+  }
+  try{ history.replaceState(null,'',location.pathname); }catch(e){}
+}
+
+// ============ 启动 ============
+load();
+var purged=purgeDone();
+if(purged)save();
+if(!storageOK){
+  document.getElementById('hint').textContent='当前打开方式不让存本地数据，记录关掉就没了。请用 Chrome 打开，或每次用「导出备份」保存。';
+}
+render();
+takeIncoming();
+if('serviceWorker' in navigator && location.protocol==='https:'){
+  window.addEventListener('load',function(){
+    navigator.serviceWorker.register('sw.js').catch(function(){});
+  });
+}
+</script>
+</body>
+</html>
