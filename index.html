@@ -117,7 +117,7 @@ main{max-width:620px;margin:0 auto;padding:13px 14px 0}
 <header>
   <h1>取件码</h1>
   <span id="count">启动中…</span>
-  <span id="ver">v13</span>
+  <span id="ver">v14</span>
   <button id="clearDone">清理已取</button>
 </header>
 <main>
@@ -347,8 +347,32 @@ function findCodes(seg){
   while((m4=PING_RE.exec(seg)))add(m4[1]);
   return codes;
 }
+function parseList(text,nowMs){
+  var now=nowMs||Date.now();
+  var lines=String(text||'').split('\n');
+  var out=[];
+  for(var i=0;i<lines.length;i++){
+    var ln=lines[i].trim();
+    if(!/^[·•・]/.test(ln))continue;
+    var parts=ln.replace(/^[·•・]\s*/,'').split(/\s*[·•・]\s*/).filter(Boolean);
+    if(parts.length<2)continue;
+    var code=parts[0].trim();
+    if(!/[0-9A-Za-z]/.test(code)||code.length<3)continue;
+    var note='',station='';
+    if(parts.length===2){station=parts[1];}
+    else{note=parts[1];station=parts.slice(2).join(' · ');}
+    out.push({
+      code:code,station:station,platform:'',phone:'',
+      deadline:null,deadlineLabel:'',deadlineApprox:false,
+      raw:ln,createdAt:now,done:false,doneAt:0,note:note
+    });
+  }
+  return out;
+}
 function parseMessages(text,nowMs){
   var now=nowMs||Date.now();
+  var lined=parseList(text,now);
+  if(lined.length)return lined;
   var src=normalizeText(text);
   var segs=splitMessages(src);
   var items=[],seen=new Set();
@@ -677,8 +701,8 @@ document.getElementById('parse').addEventListener('click',function(){
   var el=document.getElementById('paste');
   var text=el.value.trim();
   if(!text){toast('先粘贴一段文字');return;}
-  if(text.indexOf('#PICKUP-V1#')===0){
-    importPayload(text.slice(11).trim());
+  if(text.indexOf('#PICKUP-V1#')>=0){
+    importPayload(text);
     el.value='';
     return;
   }
@@ -697,9 +721,16 @@ document.getElementById('parse').addEventListener('click',function(){
   toast(feedbackOf(r));
 });
 
-function importPayload(b64){
-  var data;
-  try{data=JSON.parse(b64dec(b64));}catch(e){toast('备份文本损坏了');return;}
+function importPayload(raw){
+  var text=String(raw||'');
+  var at=text.indexOf('#PICKUP-V1#');
+  var b64=(at>=0?text.slice(at+11):text).replace(/\s+/g,'').replace(/-/g,'+').replace(/_/g,'/');
+  while(b64.length%4)b64+='=';
+  var data=null;
+  try{data=JSON.parse(b64dec(b64));}catch(e){
+    toast('备份没能读出来，可能是复制时被截断了，回到原来那页重新点一次「导出备份」');
+    return;
+  }
   if(!data||!Array.isArray(data.items)){toast('备份格式不对');return;}
   var r=mergeItems(data.items);
   save();purgeDone();render();
