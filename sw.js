@@ -1,10 +1,12 @@
-const CACHE = 'pickup-v14';
+const CACHE = 'pickup-v15';
 const ASSETS = ['./', './index.html', './manifest.webmanifest',
                 './icon-180.png', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(
-    caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting())
+    caches.open(CACHE)
+      .then(c => Promise.all(ASSETS.map(a => c.add(a).catch(() => null))))
+      .then(() => self.skipWaiting())
   );
 });
 
@@ -22,16 +24,24 @@ self.addEventListener('fetch', e => {
   const url = new URL(req.url);
   if (url.origin !== location.origin) return;
 
-  // 页面本身：先联网拿最新版，失败再回退到缓存（离线可用）
+  // 页面本身：缓存优先，秒开；同时后台拉新版，下次打开就是新的
   if (req.mode === 'navigate') {
+    const net = fetch(req).then(res => {
+      if (res && res.ok) {
+        return caches.open(CACHE)
+          .then(c => c.put('./index.html', res.clone()))
+          .then(() => res);
+      }
+      return res;
+    }).catch(() => null);
+
+    e.waitUntil(net.catch(() => {}));
+
     e.respondWith(
-      fetch(req)
-        .then(res => {
-          const copy = res.clone();
-          caches.open(CACHE).then(c => c.put('./index.html', copy));
-          return res;
-        })
-        .catch(() => caches.match('./index.html').then(r => r || caches.match('./')))
+      caches.match('./index.html').then(cached => {
+        if (cached) return cached;
+        return net.then(res => res || caches.match('./'));
+      })
     );
     return;
   }
@@ -39,8 +49,10 @@ self.addEventListener('fetch', e => {
   // 其它静态资源：缓存优先
   e.respondWith(
     caches.match(req).then(r => r || fetch(req).then(res => {
-      const copy = res.clone();
-      caches.open(CACHE).then(c => c.put(req, copy));
+      if (res && res.ok) {
+        const copy = res.clone();
+        caches.open(CACHE).then(c => c.put(req, copy));
+      }
       return res;
     }).catch(() => r))
   );
